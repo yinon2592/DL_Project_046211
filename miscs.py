@@ -3,6 +3,8 @@ import pandas as pd
 import torch
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
+seed = 1
+
 def clean_text(text):
     text = re.sub(r'@[A-Za-z0-9]+', '', text)  # Remove usernames
     text = re.sub(r'https?://[A-Za-z0-9./]+', '', text)  # Remove URLs
@@ -27,7 +29,7 @@ def get_clean_tweets_ds(file_path = "data/training.1600000.processed.noemoticon.
     df = df[df['label'] != 'neutral']
     if verbose:
         print(df.label.value_counts())
-        print(df.sample(5))
+        print(df.sample(5, random_state=seed))
 
     # Step 2: Data Preprocessing - clean the text
     df['text'] = df['text'].apply(clean_text)
@@ -42,7 +44,10 @@ def get_model_and_tokenizer(model_name):
 
     return model, tokenizer
 
-def generate_sentences(ds_df, model, tokenizer):
+# Step 4: Sentence Generation
+def generate_sentences(ds_df, model, tokenizer, prompts = []):
+    # prompts = input prompts that containes {text} for where the text should be inserted,
+    # {sentiment} for the sentiment, and {opposite_sentiment} for the opposite sentiment
     # Step 4: Sentence Generation
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # Use GPU if available
     model.to(device)
@@ -71,3 +76,36 @@ def generate_sentences(ds_df, model, tokenizer):
                 ds_df.at[i, 'generated_sentence'] = ""  # Assign an empty string if input_ids is None or has shape (0, )
 
     return ds_df
+
+def create_model_querry(prompt, text, original_sentiment):
+    sentiment = original_sentiment
+    opposite_sentiment = 'positive' if sentiment == 'negative' else 'negative'  # Determine the opposite sentiment
+    if '{sentiment}' in prompt and '{opposite_sentiment}' in prompt:
+        input_prompt = prompt.format(text=text, sentiment=sentiment, opposite_sentiment=opposite_sentiment)
+    elif '{sentiment}' in prompt and '{opposite_sentiment}' not in prompt:
+        input_prompt = prompt.format(text=text, sentiment=sentiment)
+    elif '{sentiment}' not in prompt and '{opposite_sentiment}' in prompt:
+        input_prompt = prompt.format(text=text, opposite_sentiment=opposite_sentiment)
+    else:
+        input_prompt = prompt.format(text=text, sentiment=sentiment, opposite_sentiment=opposite_sentiment)
+
+    return input_prompt
+
+def create_prompts(preset_prompts = [], verbose = False):
+    # preset_prompts: a list of prompts that contains the following strings in it for the text and possibly the existing sentiment
+    tail_prompt_list = ['. keep the original sentence meaning', '\nlets think step by step: ', '']
+    number_changeable_words = ['1', '2', '3']
+    # QAs = [('Q: ', 'A: '), ('', '')]
+
+    prompts = preset_prompts
+
+    for changeable_words in number_changeable_words:
+        for tail_prompt in tail_prompt_list:
+            head_prompt = 'change {changeable_words}'.format(
+                changeable_words=changeable_words) + ' words to change the following sentence sentiment from {sentiment} to {opposite_sentiment}. the sentence is: '
+            str = head_prompt + '{text}' + tail_prompt
+            prompts.append(str)
+            if verbose:
+                print(str)
+
+    return prompts
