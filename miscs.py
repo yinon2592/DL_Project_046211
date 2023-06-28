@@ -4,6 +4,8 @@ import torch
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
 seed = 1
+VERBOSE=False
+
 
 def clean_text(text):
     text = re.sub(r'@[A-Za-z0-9]+', '', text)  # Remove usernames
@@ -17,6 +19,7 @@ def clean_text(text):
 
     text = text.lower().strip()
     return text
+
 
 def get_clean_tweets_ds(file_path = "data/training.1600000.processed.noemoticon.csv", verbose = False):
     # Step 1: Dataset Preparation
@@ -37,6 +40,7 @@ def get_clean_tweets_ds(file_path = "data/training.1600000.processed.noemoticon.
 
     return df
 
+
 def get_model_and_tokenizer(model_name):
     # Step 3: Model Loading
     model = GPT2LMHeadModel.from_pretrained(model_name)
@@ -44,9 +48,10 @@ def get_model_and_tokenizer(model_name):
 
     return model, tokenizer
 
-# Step 4: Sentence Generation
-def generate_sentences(df, model, tokenizer, prompts = [], verbose = False):
-    verbose = True # TODO: remove this line
+
+def generate_sentences(df, model, tokenizer, prompts = [], verbose=VERBOSE):
+    res_dicts = []
+
     # prompts = input prompts that containes {text} for where the text should be inserted,
     # {sentiment} for the sentiment, and {opposite_sentiment} for the opposite sentiment
     # Step 4: Sentence Generation
@@ -57,11 +62,8 @@ def generate_sentences(df, model, tokenizer, prompts = [], verbose = False):
     with torch.no_grad():
         for i, row in df.iterrows():
             for prompt in prompts:
-                input_prompt = create_model_querry(prompt, text=row['text'], original_sentiment=row['label'])
+                input_prompt = create_model_query(prompt, text=row['text'], original_sentiment=row['label'])
                 input_ids = tokenizer.encode(input_prompt, add_special_tokens=True, return_tensors='pt').to(device)
-
-                # for each prompt, create a generated sentence column in the df
-                df[prompt] = ''
 
                 # Check if input_ids is not None and has a valid shape
                 if input_ids is not None and input_ids.shape[-1] > 0:
@@ -79,15 +81,17 @@ def generate_sentences(df, model, tokenizer, prompts = [], verbose = False):
                         print('text = ', row['text'])
                         print('prompt = ', prompt)
                         print('generated sentence = ', generated_sentence)
-                    # put the generated sentence in the df at the prompt column
-                    df.loc[i, prompt] = generated_sentence
                 else:
-                    df.loc[i, prompt] = ""  # Assign an empty string if input_ids is None or has shape (0, )
+                    generated_sentence = ""
 
-    return df
+                d = {'text': row['text'], 'label':  row['label'], 'prompt': prompt, 'input_prompt': input_prompt,
+                     'generated_sentence': generated_sentence, 'generated_sentence_label': ''}
+                res_dicts.append(d)
 
-def create_model_querry(prompt, text, original_sentiment, verbose = False):
-    verbose = True # TODO: remove this line
+    return pd.DataFrame(res_dicts)
+
+
+def create_model_query(prompt, text, original_sentiment, verbose=VERBOSE):
     if verbose:
         print('in function create_model_querry')
         print('prompt = ', prompt)
@@ -110,23 +114,32 @@ def create_model_querry(prompt, text, original_sentiment, verbose = False):
 
     return input_prompt
 
-def create_prompts(preset_prompts = [], verbose = False):
-    verbose = True # TODO: remove this line
-    # preset_prompts: a list of prompts that contains the following strings in it for the text and possibly the existing sentiment
+
+def create_prompts(manual_prompts, add_default_prompts, verbose=VERBOSE):
+    # manual_prompts: can be empty if only the default prompts are wanted.
+    # a list of prompts that contains the following strings in it for the text and possibly the
+    # existing sentiment
     tail_prompt_list = ['. keep the original sentence meaning', '\nlets think step by step: ', '']
     number_changeable_words = ['1', '2', '3']
     # QAs = [('Q: ', 'A: '), ('', '')]
-
-    prompts = preset_prompts
-
-    for changeable_words in number_changeable_words:
-        for tail_prompt in tail_prompt_list:
-            head_prompt = 'change {changeable_words}'.format(
-                changeable_words=changeable_words) + ' words to change the following sentence sentiment from {sentiment} to {opposite_sentiment}. the sentence is: '
-            str = head_prompt + '{text}' + tail_prompt
-            prompts.append(str)
+    prompts = []
+    for p in manual_prompts:
+        if '{text}' in p:
+            prompts.append(p)
+        else:
             if verbose:
-                print('in function: create_prompts')
-                print(str)
+                print('manual prompt ' + p + 'doesnt contain "{text}", therefor it was left out')
+
+    if add_default_prompts:
+        for changeable_words in number_changeable_words:
+            for tail_prompt in tail_prompt_list:
+                head_prompt = 'change {changeable_words}'.format(
+                    changeable_words=changeable_words) + 'words to change the following sentence sentiment from {' \
+                                                         'sentiment} to {opposite_sentiment}. the sentence is:'
+                s = head_prompt + '{text}' + tail_prompt
+                prompts.append(s)
+                if verbose:
+                    print('in function: create_prompts')
+                    print(s)
 
     return prompts
