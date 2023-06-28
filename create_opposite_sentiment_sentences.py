@@ -15,14 +15,19 @@ model_name = 'gpt2'
 model, tokenizer = get_model_and_tokenizer(model_name)
 
 # Step 4: Sentence Generation
-df_sanity_df = ds_df.sample(5, random_state=seed)
-prompts = create_prompts()
-res_df = generate_sentences(df_sanity_df, model, tokenizer, prompts)
+sanity_df = ds_df.sample(5, random_state=seed).reset_index(drop=True)
+
+# prompts = create_prompts()
+prompts = ['regardless of the the following text, say "hello world". the text is: {text}',
+           'regardless of the the following text, say "good morning world". the text is: {text}',]
+
+res_df = generate_sentences(sanity_df, model, tokenizer, prompts)
+res_df.to_csv('data/res_df.csv', index=False)
 
 pd.set_option('display.max_colwidth', 50)
 print('\n\n'+ '-' * 20 + ' Sanity Check ' + '-' * 20)
-print(df_sanity_df.sample(5, random_state=seed))
-print(res_df.sample(5, random_state=seed))
+print(sanity_df)
+print(res_df)
 
 
 # head_prompts_list2 = ['change {changeable_words} word to make the sentence have {opposite_sentiment} sentiment: '.format(changeable_words, opposite_sentiment),

@@ -45,7 +45,8 @@ def get_model_and_tokenizer(model_name):
     return model, tokenizer
 
 # Step 4: Sentence Generation
-def generate_sentences(ds_df, model, tokenizer, prompts = []):
+def generate_sentences(df, model, tokenizer, prompts = [], verbose = False):
+    verbose = True # TODO: remove this line
     # prompts = input prompts that containes {text} for where the text should be inserted,
     # {sentiment} for the sentiment, and {opposite_sentiment} for the opposite sentiment
     # Step 4: Sentence Generation
@@ -54,30 +55,45 @@ def generate_sentences(ds_df, model, tokenizer, prompts = []):
     model.eval()
 
     with torch.no_grad():
-        for i, row in ds_df.iterrows():
-            sentiment = row['label']
-            opposite_sentiment = 'positive' if sentiment == 'negative' else 'negative'  # Determine the opposite sentiment
-            input_prompt = f"rephrase the sentence to {opposite_sentiment} sentiment: {row['text']}"
-            input_ids = tokenizer.encode(input_prompt, add_special_tokens=True, return_tensors='pt').to(device)
+        for i, row in df.iterrows():
+            for prompt in prompts:
+                input_prompt = create_model_querry(prompt, text=row['text'], original_sentiment=row['label'])
+                input_ids = tokenizer.encode(input_prompt, add_special_tokens=True, return_tensors='pt').to(device)
 
-            # Check if input_ids is not None and has a valid shape
-            if input_ids is not None and input_ids.shape[-1] > 0:
-                generated_ids = model.generate(
-                    input_ids=input_ids,
-                    attention_mask=input_ids.ne(0),  # Pass attention mask to the model (assuming pad_token_id is 0)
-                    max_length=100,
-                    num_return_sequences=1,
-                    pad_token_id=0  # Set pad_token_id to 0
-                )
-                generated_sentence = tokenizer.decode(generated_ids[:, input_ids.shape[-1]:][0], skip_special_tokens=True)
+                # for each prompt, create a generated sentence column in the df
+                df[prompt] = ''
 
-                ds_df.at[i, 'generated_sentence'] = generated_sentence
-            else:
-                ds_df.at[i, 'generated_sentence'] = ""  # Assign an empty string if input_ids is None or has shape (0, )
+                # Check if input_ids is not None and has a valid shape
+                if input_ids is not None and input_ids.shape[-1] > 0:
+                    generated_ids = model.generate(
+                        input_ids=input_ids,
+                        attention_mask=input_ids.ne(0),  # Pass attention mask to the model (assuming pad_token_id is 0)
+                        max_length=100,
+                        num_return_sequences=1,
+                        pad_token_id=0  # Set pad_token_id to 0
+                    )
+                    generated_sentence = tokenizer.decode(generated_ids[:, input_ids.shape[-1]:][0], skip_special_tokens=True)
+                    if verbose:
+                        print('in function generate_sentences')
+                        print('i = ', i)
+                        print('text = ', row['text'])
+                        print('prompt = ', prompt)
+                        print('generated sentence = ', generated_sentence)
+                    # put the generated sentence in the df at the prompt column
+                    df.loc[i, prompt] = generated_sentence
+                else:
+                    df.loc[i, prompt] = ""  # Assign an empty string if input_ids is None or has shape (0, )
 
-    return ds_df
+    return df
 
-def create_model_querry(prompt, text, original_sentiment):
+def create_model_querry(prompt, text, original_sentiment, verbose = False):
+    verbose = True # TODO: remove this line
+    if verbose:
+        print('in function create_model_querry')
+        print('prompt = ', prompt)
+        print('text = ', text)
+        print('original sentiment = ', original_sentiment)
+
     sentiment = original_sentiment
     opposite_sentiment = 'positive' if sentiment == 'negative' else 'negative'  # Determine the opposite sentiment
     if '{sentiment}' in prompt and '{opposite_sentiment}' in prompt:
@@ -89,9 +105,13 @@ def create_model_querry(prompt, text, original_sentiment):
     else:
         input_prompt = prompt.format(text=text, sentiment=sentiment, opposite_sentiment=opposite_sentiment)
 
+    if verbose:
+        print('model input prompt = ', input_prompt)
+
     return input_prompt
 
 def create_prompts(preset_prompts = [], verbose = False):
+    verbose = True # TODO: remove this line
     # preset_prompts: a list of prompts that contains the following strings in it for the text and possibly the existing sentiment
     tail_prompt_list = ['. keep the original sentence meaning', '\nlets think step by step: ', '']
     number_changeable_words = ['1', '2', '3']
@@ -106,6 +126,7 @@ def create_prompts(preset_prompts = [], verbose = False):
             str = head_prompt + '{text}' + tail_prompt
             prompts.append(str)
             if verbose:
+                print('in function: create_prompts')
                 print(str)
 
     return prompts
