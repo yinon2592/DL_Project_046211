@@ -12,9 +12,9 @@ sanity_df = ds_df.sample(5, random_state=seed).reset_index(drop=True)
 manual_prompts = ['regardless of the the following text, say "hello world". the text is: {text}',
                   'regardless of the the following text, say "good morning world". the text is: {text}']
 
-prompts = create_prompts(manual_prompts, add_default_prompts=False)
+prompts = create_prompts(manual_prompts, add_default_prompts=True)
 
-res_df = generate_sentences(sanity_df, model, tokenizer, prompts)
+res_df = generate_sentences(sanity_df, model, tokenizer, prompts, max_answer_length=100)
 res_df.to_csv('data/res_df.csv', index=False)
 
 pd.set_option('display.max_colwidth', 50)

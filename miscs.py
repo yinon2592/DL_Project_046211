@@ -44,21 +44,22 @@ def get_clean_tweets_ds(file_path = "data/training.1600000.processed.noemoticon.
 
 
 def get_model_and_tokenizer(model_name):
-
-    if model_name == 'gpt2':
-        model = GPT2LMHeadModel.from_pretrained(model_name)
+    if 'gpt2' in model_name:
+        configuration = GPT2Config.from_pretrained(model_name, output_hidden_states=False)
         tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+        configuration.pad_token_id = tokenizer.eos_token_id + 1
+        model = GPT2LMHeadModel.from_pretrained(model_name, config=configuration)
         # configuration = GPT2Config.from_pretrained(model_name, output_hidden_states=False)
         # model = GPT2LMHeadModel.from_pretrained(model_name, config=configuration)
         # tokenizer = GPT2Tokenizer.from_pretrained(model_name, bos_token='<|startoftext|>', eos_token='<|endoftext|>', pad_token='<|pad|>')
     elif model_name == 'bert-base-uncased':
-        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-        model = TFBertModel.from_pretrained("bert-base-uncased")
+        tokenizer = BertTokenizer.from_pretrained(model_name)
+        model = TFBertModel.from_pretrained(model_name)
 
     return model, tokenizer
 
 
-def generate_sentences(df, model, tokenizer, prompts=[], verbose=VERBOSE):
+def generate_sentences(df, model, tokenizer, prompts=[], max_answer_length=100, verbose=VERBOSE):
     res_dicts = []
 
     # prompts = input prompts that contains {text} for where the text should be inserted,
@@ -78,10 +79,10 @@ def generate_sentences(df, model, tokenizer, prompts=[], verbose=VERBOSE):
                 if input_ids is not None and input_ids.shape[-1] > 0:
                     generated_ids = model.generate(
                         input_ids=input_ids,
-                        attention_mask=input_ids.ne(0),  # Pass attention mask to the model (assuming pad_token_id is 0)
-                        max_length=100,
-                        num_return_sequences=1,
-                        pad_token_id=0  # Set pad_token_id to 0
+                        # attention_mask=input_ids.ne(0),  # Pass attention mask to the model (assuming pad_token_id is 0)
+                        max_length=max_answer_length,
+                        num_return_sequences=1
+                        # pad_token_id=0  # Set pad_token_id to 0
                     )
                     generated_sentence = tokenizer.decode(generated_ids[:, input_ids.shape[-1]:][0], skip_special_tokens=True)
                     if verbose:

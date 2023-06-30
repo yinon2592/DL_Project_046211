@@ -4,16 +4,17 @@ from miscs import *
 
 ds_df = get_clean_tweets_ds()
 
-model_name = 'gpt2'
+model_name = 'gpt2-large'
 model, tokenizer = get_model_and_tokenizer(model_name)
 
 sanity_df = ds_df.sample(5, random_state=seed).reset_index(drop=True)
 
-manual_prompts = ['{text}. Among positive and negative, the previous text was: ']
+# manual_prompts = ["Im having a great day! was the previous text positive or negative? answer in one word:"]
+manual_prompts = ["{text}. was the previous text positive or negative? answer in one word:"]
 
 prompts = create_prompts(manual_prompts, add_default_prompts=False)
 
-res_df = generate_sentences(sanity_df, model, tokenizer, prompts)
+res_df = generate_sentences(sanity_df, model, tokenizer, prompts, max_answer_length=3)
 res_df.to_csv('data/generative_cls_res_df.csv', index=False)
 
 pd.set_option('display.max_colwidth', 50)
