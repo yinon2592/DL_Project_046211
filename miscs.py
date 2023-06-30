@@ -1,9 +1,11 @@
 import re
 import pandas as pd
 import torch
-from transformers import GPT2LMHeadModel, GPT2Tokenizer
+from transformers import GPT2LMHeadModel, GPT2Tokenizer, GPT2Config
 
-seed = 1
+from transformers import BertTokenizer, TFBertModel
+
+seed = 5
 VERBOSE=False
 
 
@@ -42,17 +44,24 @@ def get_clean_tweets_ds(file_path = "data/training.1600000.processed.noemoticon.
 
 
 def get_model_and_tokenizer(model_name):
-    # Step 3: Model Loading
-    model = GPT2LMHeadModel.from_pretrained(model_name)
-    tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+
+    if model_name == 'gpt2':
+        model = GPT2LMHeadModel.from_pretrained(model_name)
+        tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+        # configuration = GPT2Config.from_pretrained(model_name, output_hidden_states=False)
+        # model = GPT2LMHeadModel.from_pretrained(model_name, config=configuration)
+        # tokenizer = GPT2Tokenizer.from_pretrained(model_name, bos_token='<|startoftext|>', eos_token='<|endoftext|>', pad_token='<|pad|>')
+    elif model_name == 'bert-base-uncased':
+        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        model = TFBertModel.from_pretrained("bert-base-uncased")
 
     return model, tokenizer
 
 
-def generate_sentences(df, model, tokenizer, prompts = [], verbose=VERBOSE):
+def generate_sentences(df, model, tokenizer, prompts=[], verbose=VERBOSE):
     res_dicts = []
 
-    # prompts = input prompts that containes {text} for where the text should be inserted,
+    # prompts = input prompts that contains {text} for where the text should be inserted,
     # {sentiment} for the sentiment, and {opposite_sentiment} for the opposite sentiment
     # Step 4: Sentence Generation
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # Use GPU if available
@@ -93,7 +102,7 @@ def generate_sentences(df, model, tokenizer, prompts = [], verbose=VERBOSE):
 
 def create_model_query(prompt, text, original_sentiment, verbose=VERBOSE):
     if verbose:
-        print('in function create_model_querry')
+        print('in function create_model_query')
         print('prompt = ', prompt)
         print('text = ', text)
         print('original sentiment = ', original_sentiment)
@@ -106,6 +115,8 @@ def create_model_query(prompt, text, original_sentiment, verbose=VERBOSE):
         input_prompt = prompt.format(text=text, sentiment=sentiment)
     elif '{sentiment}' not in prompt and '{opposite_sentiment}' in prompt:
         input_prompt = prompt.format(text=text, opposite_sentiment=opposite_sentiment)
+    elif '{sentiment}' not in prompt and '{opposite_sentiment}' not in prompt:
+        input_prompt = prompt.format(text=text)
     else:
         input_prompt = prompt.format(text=text, sentiment=sentiment, opposite_sentiment=opposite_sentiment)
 
