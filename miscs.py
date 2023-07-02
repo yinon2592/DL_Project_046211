@@ -10,6 +10,7 @@ VERBOSE=False
 
 
 def clean_text(text):
+    text = str(text)
     text = re.sub(r'@[A-Za-z0-9]+', '', text)  # Remove usernames
     text = re.sub(r'https?://[A-Za-z0-9./]+', '', text)  # Remove URLs
     text = re.sub(r'[^A-Za-z0-9]+', ' ', text)  # Remove special characters
@@ -25,13 +26,17 @@ def clean_text(text):
 
 def get_clean_tweets_ds(file_path = "data/training.1600000.processed.noemoticon.csv", verbose = False):
     # Step 1: Dataset Preparation
-    df = pd.read_csv(file_path, encoding='ISO-8859-1', header=None)
-    df = df[[0, 5]]
-    df.columns = ['label', 'text']
-    df = df.sample(100, random_state=1)
-    df['label'] = df['label'].replace({0: 'negative', 2: 'neutral', 4: 'positive'})
-    # Drop the rows with 'neutral' sentiment
-    df = df[df['label'] != 'neutral']
+    if file_path == "data/training.1600000.processed.noemoticon.csv":
+        df = pd.read_csv(file_path, encoding='ISO-8859-1', header=None)
+        df = df[[0, 5]]
+        df.columns = ['label', 'text']
+        df['label'] = df['label'].replace({0: 'negative', 2: 'neutral', 4: 'positive'})
+        # Drop the rows with 'neutral' sentiment
+        df = df[df['label'] != 'neutral']
+    else:
+        df = pd.read_csv(file_path)
+        df['label'] = df['label'].replace({0: 'negative', 1: 'positive'})
+
     if verbose:
         print(df.label.value_counts())
         print(df.sample(5, random_state=seed))
@@ -49,17 +54,11 @@ def get_model_and_tokenizer(model_name):
         tokenizer = GPT2Tokenizer.from_pretrained(model_name)
         configuration.pad_token_id = tokenizer.eos_token_id + 1
         model = GPT2LMHeadModel.from_pretrained(model_name, config=configuration)
-        # configuration = GPT2Config.from_pretrained(model_name, output_hidden_states=False)
-        # model = GPT2LMHeadModel.from_pretrained(model_name, config=configuration)
-        # tokenizer = GPT2Tokenizer.from_pretrained(model_name, bos_token='<|startoftext|>', eos_token='<|endoftext|>', pad_token='<|pad|>')
-    elif model_name == 'bert-base-uncased':
-        tokenizer = BertTokenizer.from_pretrained(model_name)
-        model = TFBertModel.from_pretrained(model_name)
 
     return model, tokenizer
 
 
-def generate_sentences(df, model, tokenizer, prompts=[], max_answer_length=100, verbose=VERBOSE):
+def generate_sentences(df, model, tokenizer, prompts=[], max_answer_length=100, out_csv_name='temp', save_results=False, verbose=VERBOSE):
     res_dicts = []
 
     # prompts = input prompts that contains {text} for where the text should be inserted,
@@ -98,6 +97,17 @@ def generate_sentences(df, model, tokenizer, prompts=[], max_answer_length=100, 
                      'generated_sentence': generated_sentence, 'generated_sentence_label': ''}
                 res_dicts.append(d)
 
+                if i % 100 == 0:
+                    print(i)
+                    # pd.DataFrame(res_dicts).to_csv('data/{}.csv'.format('temp'), index=False)
+                    if save_results:
+                        pd.DataFrame(res_dicts).to_csv('data/{}.csv'.format(out_csv_name), mode='a', index=False, header=False)
+                        print('saved to csv')
+                        res_dicts = []
+    if save_results:
+        pd.DataFrame(res_dicts).to_csv('data/{}.csv'.format(out_csv_name), mode='a', index=False, header=False)
+        print('saved to csv')
+        res_dicts = []
     return pd.DataFrame(res_dicts)
 
 
