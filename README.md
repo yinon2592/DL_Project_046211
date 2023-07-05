@@ -34,3 +34,7 @@
 we noticed that we got the best results using fine tuned with prompt binary classifier (we tried also feature extracting training method but got inferior results)
 regarding generative classifier training we assume that 'gpt-2 large' model is not big enough for this task and different modules can
 be used for future experiment (such as 'GPT2ForQuestionAnswering')
+
+## References
+https://www.kaggle.com/code/abdeljalilouedraogo/twitter-sentiment-analysis-on-sentiment140-dataset
+https://www.kaggle.com/code/baekseungyun/gpt-2-with-huggingface-pytorch
