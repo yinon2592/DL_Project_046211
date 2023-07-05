@@ -1,9 +1,9 @@
 # DL_Project_046211
-## project goal :
+## Project Goal :
   sentiment analysis with existing LLMs 
-  we performed experiments with GPT-2 different size models to assess 2 predication approaches: genrative and binary classifcation
+  we performed experiments with GPT-2 different size models to assess 2 classifcation approaches: binary & genrative   
 
-## project files details:
+## Project Files Details:
 | file | content | 
 |----------|----------|
 |   binary_classifier_test.ipynb            |   training 'gpt-2' model for sequence binary classification  |   
@@ -13,7 +13,7 @@
 |   generative_classifier_training.ipynb    |   training 'gpt-2 large' model for sequence generative classification  | 
 |   reverse_sentiment_experiment.ipynb      |   perform reverse sentiment experiment  | 
 
- ## project technical details: 
+ ## Project Technical Details: 
  in this project we used goole-drive for:
  1) saving our 3 chunks cleaned and divided sentiment140 dataset
  2) saving the fine tuned models
