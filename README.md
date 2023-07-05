@@ -22,5 +22,15 @@
   therefore if you want to train\test the models on your own please make sure
   to connect your goole-drive account ahead and replace the relevant paths as you wish
 
+ ## Project Main Results
+ we tested the model with 5,000 tweets and got the following results:
+ | fine tuned model | test accuracy | remarks
+|----------|----------|----------|
+|   binary classifier           |   0.66  |   -|
+|   binary classifier           |   0.71  |   using {text} + 'was the previous text positive or negative' prompt during training|
+|   generative classifier           |   -  |   we tried diffrent prompts on 'gpt-2 large' model with no actual progress| 
  
-
+## Conclusions And Future Work
+we noticed that we got the best results using fine tuned with prompt binary classifier (we tried also feature extracting training method but got inferior results)
+regarding generative classifier training we assume that 'gpt-2 large' model is not big enough for this task and different modules can
+be used for future experiment (such as 'GPT2ForQuestionAnswering')
