@@ -28,7 +28,7 @@
 |----------|----------|----------|
 |   binary classifier           |   0.66  |   -|
 |   binary classifier           |   0.71  |   using {text} + 'was the previous text positive or negative' prompt during training|
-|   generative classifier           |   -  |   we tried diffrent prompts on 'gpt-2 large' model with no actual progress| 
+|   generative classifier           |   -  |   we tried diffrent prompts with 'gpt-2 large' model with no actual progress| 
  
 ## Conclusions And Future Work
 we noticed that we got the best results using fine tuned with prompt binary classifier (we tried also feature extracting training method but got inferior results)
