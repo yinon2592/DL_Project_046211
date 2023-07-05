@@ -1,6 +1,6 @@
 # DL_Project_046211
 ## Project Goal :
-  sentiment analysis with existing LLMs 
+  ### sentiment analysis with existing LLMs
   we performed experiments with GPT-2 different size models to assess 2 classifcation approaches: binary & genrative   
 
 ## Project Files Details:
