@@ -3,10 +3,10 @@ import pandas as pd
 import torch
 from transformers import GPT2LMHeadModel, GPT2Tokenizer, GPT2Config
 
-from transformers import BertTokenizer, TFBertModel
 
 seed = 5
-VERBOSE=False
+# change VERBOSE to True if you want to see debug printings during test run
+VERBOSE = False
 
 
 def clean_text(text):
@@ -54,6 +54,8 @@ def get_model_and_tokenizer(model_name):
         tokenizer = GPT2Tokenizer.from_pretrained(model_name)
         configuration.pad_token_id = tokenizer.eos_token_id + 1
         model = GPT2LMHeadModel.from_pretrained(model_name, config=configuration)
+    else:
+        raise ValueError("Model name {} is not supported".format(model_name))
 
     return model, tokenizer
 
@@ -62,8 +64,9 @@ def generate_sentences(df, model, tokenizer, prompts=[], max_answer_length=100, 
     res_dicts = []
 
     # prompts = input prompts that contains {text} for where the text should be inserted,
-    # {sentiment} for the sentiment, and {opposite_sentiment} for the opposite sentiment
-    # Step 4: Sentence Generation
+    # in case of opposite sentiment generation, the prompt must also include {sentiment} for the sentiment, and
+    # {opposite_sentiment} for the opposite sentiment
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # Use GPU if available
     model.to(device)
     model.eval()
@@ -78,10 +81,8 @@ def generate_sentences(df, model, tokenizer, prompts=[], max_answer_length=100, 
                 if input_ids is not None and input_ids.shape[-1] > 0:
                     generated_ids = model.generate(
                         input_ids=input_ids,
-                        # attention_mask=input_ids.ne(0),  # Pass attention mask to the model (assuming pad_token_id is 0)
                         max_length=max_answer_length,
                         num_return_sequences=1
-                        # pad_token_id=0  # Set pad_token_id to 0
                     )
                     generated_sentence = tokenizer.decode(generated_ids[:, input_ids.shape[-1]:][0], skip_special_tokens=True)
                     if verbose:

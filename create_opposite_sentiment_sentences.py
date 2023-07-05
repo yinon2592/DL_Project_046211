@@ -6,7 +6,7 @@ ds_df = get_clean_tweets_ds()
 model_name = 'gpt2'
 model, tokenizer = get_model_and_tokenizer(model_name)
 
-# Step 4: Sentence Generation
+# create aa sanity df
 sanity_df = ds_df.sample(5, random_state=seed).reset_index(drop=True)
 
 manual_prompts = ['regardless of the the following text, say "hello world". the text is: {text}',
